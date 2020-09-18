@@ -63,6 +63,50 @@ let rec check_exp env (pos, (exp, tref)) =
   | A.RealExp _ -> set tref T.REAL
   | A.StringExp _ -> set tref T.STRING
   | A.LetExp (decs, body) -> check_exp_let env pos tref decs body
+  | A.VarExp v -> check_var env v tref
+  | A.AssignExp (v, e) -> let t1 = check_var env v tref in
+                          let t2 = check_exp env e in
+                          compatible t1 t2 pos;
+                          T.VOID
+  | A.IfExp (t,b,v) ->  let ty1 = check_exp env t in
+                        let ty2 = check_exp env b in
+                        begin
+                          match ty1 with 
+                          | T.BOOL -> begin
+                            match v with   
+                            |Some v1 -> compatible ty2 (check_exp env v1) pos;
+                                        set tref ty2
+                            |None -> set tref T.VOID
+                            end
+                          | _ -> type_mismatch pos (T.BOOL) ty1
+                        end
+  | A.BinaryExp (l,op,r)->  begin
+                              match op with
+                              | A.And | A.Or -> check_logic_types env l r pos tref
+                              | A.Equal | A.NotEqual -> check_equal_notequal_types env l r pos tref
+                              | A.GreaterThan | A.GreaterEqual | A.LowerThan | A.LowerEqual -> check_compare_types env l r pos tref
+                              | A.Plus | A.Minus | A.Div | A.Times | A.Mod | A.Power -> check_operation_types env l r pos tref
+                              |_ -> Error.fatal "unimplemented"
+                            end
+                          
+  | A.WhileExp (c,e) -> let t1 = check_exp env c in
+                        let env = {env with inloop = true} in
+                        begin
+                          match t1 with
+                          |T.BOOL -> ignore(check_exp env e);  
+                                     set tref T.VOID
+                          | _ -> type_mismatch pos (T.BOOL) t1
+                        end 
+  | A.BreakExp -> if(env.inloop == true) then set tref T.VOID else Error.fatal "Break outside loop"
+  | A.NegativeExp e -> let t1 = check_exp env e in
+                        begin
+                          match t1 with
+                          |T.REAL -> set tref T.REAL
+                          |T.INT -> set tref T.INT
+                          | _ -> Error.fatal "Expected types real or integer"
+                        end
+  | A.ExpSeq ls -> avaluate_seq env pos ls tref
+
   | _ -> Error.fatal "unimplemented"
 
 and check_exp_let env pos tref decs body =
@@ -70,8 +114,42 @@ and check_exp_let env pos tref decs body =
   let tbody = check_exp env' body in
   set tref tbody
 
-(* Checking declarations *)
+and check_logic_types  env l r pos tref = 
+  let t1 = check_exp env l in
+  let t2 = check_exp env r in
+  match (t1,t2) with
+  | T.BOOL, T.BOOL -> set tref T.BOOL
+  | T.BOOL, t2 -> type_mismatch pos (T.BOOL) t2
+  | t1, T.BOOL -> type_mismatch pos (T.BOOL) t1
+  |_ -> Error.fatal "type mismatch expected bool"
 
+and check_compare_types  env l r pos tref = 
+  let t1 = check_exp env l in
+  let t2 = check_exp env r in
+  match (t1,t2) with
+  | T.INT, T.INT | T.STRING, T.STRING | T.REAL, T.REAL -> set tref T.BOOL
+  |_ -> type_mismatch pos t1 t2
+
+and check_operation_types env l r pos tref =
+  let t1 = check_exp env l in
+  let t2 = check_exp env r in
+  match (t1,t2) with
+  | T.INT, T.INT -> set tref T.INT
+  | T.INT, T.REAL | T.REAL, T.INT| T.REAL, T.REAL -> set tref T.REAL
+  |_ -> type_mismatch pos t1 t2
+
+and check_equal_notequal_types  env l r pos tref =
+  let t1 = check_exp env l in
+  let t2 = check_exp env r in
+  if(t1==t2) then set tref T.BOOL else type_mismatch pos t1 t2
+and avaluate_seq env pos ls tref =
+  let rec aux env pos ls tref=  
+    match ls with
+    | [] -> set tref T.VOID
+    | h::[] -> set tref (check_exp env h)
+    | h::t-> aux env pos t tref
+  in aux env pos ls tref;
+  
 and check_dec_var env pos ((name, type_opt, init), tref) =
   let tinit = check_exp env init in
   let tvar =
@@ -89,6 +167,11 @@ and check_dec_var env pos ((name, type_opt, init), tref) =
 and check_dec env (pos, dec) =
   match dec with
   | A.VarDec x -> check_dec_var env pos x
+  | _ -> Error.fatal "unimplemented"
+
+and check_var env (pos, v) tref =
+  match v with
+  | A.SimpleVar v -> (let r = varlook env.venv v pos in set tref r)
   | _ -> Error.fatal "unimplemented"
 
 let semantic program =

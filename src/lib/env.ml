@@ -11,9 +11,9 @@ type entry =
 let standard_types =
   [ ("void", T.VOID )
   ; ("bool", T.BOOL )
-  ; ("int", T.INT )
-  ; ("real", T.REAL )
-  ; ("string", T.STRING )
+  ; ("int", T.INT)
+  ; ("real", T.REAL)
+  ; ("string", T.STRING)
   ]
 
 let standard_functions =
