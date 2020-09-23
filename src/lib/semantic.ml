@@ -55,7 +55,6 @@ let set reference value =
   value
 
 (* Checking expressions *)
-
 let rec check_exp env (pos, (exp, tref)) =
   match exp with
   | A.BoolExp _ -> set tref T.BOOL
@@ -128,7 +127,7 @@ and check_compare_types  env l r pos tref =
   let t2 = check_exp env r in
   match (t1,t2) with
   | T.INT, T.INT | T.STRING, T.STRING | T.REAL, T.REAL -> set tref T.BOOL
-  |_ -> type_mismatch pos t1 t2
+  |_ -> Error.fatal "type mismatch"
 
 and check_operation_types env l r pos tref =
   let t1 = check_exp env l in
@@ -136,12 +135,15 @@ and check_operation_types env l r pos tref =
   match (t1,t2) with
   | T.INT, T.INT -> set tref T.INT
   | T.INT, T.REAL | T.REAL, T.INT| T.REAL, T.REAL -> set tref T.REAL
-  |_ -> type_mismatch pos t1 t2
+  |_ -> Error.fatal "type mismatch"
 
 and check_equal_notequal_types  env l r pos tref =
   let t1 = check_exp env l in
   let t2 = check_exp env r in
-  if(t1==t2) then set tref T.BOOL else type_mismatch pos t1 t2
+  compatible t1 t2 pos;
+  set tref T.BOOL
+
+
 and avaluate_seq env pos ls tref =
   let rec aux env pos ls tref=  
     match ls with
