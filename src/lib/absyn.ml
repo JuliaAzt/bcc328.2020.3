@@ -50,6 +50,7 @@ and var =
 
 and dec =
   | VarDec of vardec typed
+  | FunDec of fundec typed
   [@@deriving show]
 
 and vardec = Symbol.symbol * Symbol.symbol option * lexp
@@ -64,5 +65,13 @@ and lvar = var Location.loc
 and ldec = dec Location.loc
   [@@deriving show]
 
+(*  id da funcao, lista de declaracoes de vars, tipo da funcao e escopo *)
+and fundec = symbol * list_param * symbol * lexp
+  [@@deriving show]
+
+(* lista de declaracoes de variaveis com o typo*)
+and list_param = (symbol * symbol) list
+  [@@deriving show]
+  
 (* Annotate an ast with a dummy type representation *)
 let dummyt ast = (ast, ref None)
