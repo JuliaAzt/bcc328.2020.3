@@ -84,10 +84,11 @@ exp:
 | BREAK                                        {$loc % BreakExp}
 | IF t=exp THEN b=exp v=option(ELSE c=exp {c}) {$loc % IfExp (t,b,v)}
 | f=ID LPAREN p=exp_list RPAREN                {$loc % CallExp (f, p)}
-| LPAREN es=exp_seq RPAREN                     {$loc % ExpSeq es}
+| LPAREN es=exp_seq RPAREN                     {$loc % SeqExp es}
 | x=var                                        {$loc % VarExp x}
 | LET d=list(dec) IN e=exp                     {$loc % LetExp (d, e)}
 | x=var ASSIGN e=exp                           {$loc % AssignExp (x,e)}
+
 
 (* semicolon separated sequence of expressions *)
 exp_seq:

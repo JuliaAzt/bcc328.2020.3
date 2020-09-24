@@ -104,8 +104,9 @@ let rec check_exp env (pos, (exp, tref)) =
                           |T.INT -> set tref T.INT
                           | _ -> Error.fatal "Expected types real or integer"
                         end
-  | A.ExpSeq ls -> avaluate_seq env pos ls tref
-
+  | A.SeqExp ls -> avaluate_seq env pos ls tref
+  (*| A.CallExp (name, exp) ->  let (p, r) = funlook env.venv name pos in  
+                                function_type env (tylook env.tenv r pos) exp pos tref  *)                 
   | _ -> Error.fatal "unimplemented"
 
 and check_exp_let env pos tref decs body =
@@ -169,6 +170,7 @@ and check_dec_var env pos ((name, type_opt, init), tref) =
 and check_dec env (pos, dec) =
   match dec with
   | A.VarDec x -> check_dec_var env pos x
+  | A.FunDec f -> check_dec_fun env pos f
   | _ -> Error.fatal "unimplemented"
 
 and check_var env (pos, v) tref =
@@ -176,5 +178,67 @@ and check_var env (pos, v) tref =
   | A.SimpleVar v -> (let r = varlook env.venv v pos in set tref r)
   | _ -> Error.fatal "unimplemented"
 
+and check_dec_fun env pos ((id, listparams, ty,exp), tref) =
+  (* Primeiro deve olhar se a funcão ja existe e reportar erro se sim *)
+  match S.look id env.venv with
+  | Some x -> Error.fatal "duplicated declaration"
+  | _ ->  
+          
+          (*Lista de tipos dos paramentros e ids *)
+          let parametros_id = (check_fun_param env listparams pos) in
+          (* Lista de tipos dos paramentros *)
+          let parametros = (check_fun_param_type env listparams pos) in
+          let env1 =  fun_var_env env parametros_id pos in
+          let ty2  = tylook env1.tenv ty pos in 
+          let venv1 = (S.enter id (FunEntry (parametros, ty2)) env1.venv) in
+          let verify = function_type env1 ty exp pos tref in
+          let env2 = {env1 with venv = venv1} in
+          env2
+          
+
+
+and check_fun_param env params pos =
+(* Retorna a representação interna dos tipos *)
+  let rec aux ps tys pos = 
+    match ps with
+    | []       -> tys
+    | (id, ty)::ls -> aux ls ((look_var env id, tylook env.tenv ty pos)::tys) pos;                   
+  in aux params [] pos;
+
+and check_fun_param_type env params pos =
+(* Retorna a representação interna dos tipos *)
+  let rec aux ps tys  = 
+    match ps with
+    | []       -> tys
+    | (id, ty)::ls -> aux ls ((tylook env.tenv ty pos)::tys);                   
+  in aux params [] 
+
+(* ty = Tipo do retorno*)
+and function_type env ty exp pos tref =
+  (* Analisar se o tipo do retorno e da funcao existem*)
+  (* avaliar se sao compativeis *)
+  let type_return = (check_exp env exp) in
+  let type_function = tylook env.tenv ty pos in
+  compatible type_return type_function pos;
+  set tref type_function
+
+  (*reporta erro se já existir variavel com o nome *)
+and look_var env id = 
+match S.look id env.venv with
+  | Some x -> Error.fatal "duplicated function declaration"
+  | None -> id
+
+(* coloca os parametros no ambiente *)
+and fun_var_env env params pos =
+  let rec aux env2 ps pos=  
+    match ps with
+    | []       -> env2
+    | (id, ty)::ls -> let venv' = S.enter id (VarEntry ty) env2.venv in
+                      let env' = {env2 with venv = venv'} in
+                      aux env' ls pos
+  in aux env params pos
+
+
+  
 let semantic program =
   check_exp Env.initial program

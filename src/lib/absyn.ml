@@ -20,7 +20,7 @@ and exp_basic =
   | IfExp         of (lexp * lexp * lexp option)
   | WhileExp      of (lexp * lexp)
   | BreakExp
-  | ExpSeq        of lexp list
+  | SeqExp        of lexp list
   | CallExp       of symbol * lexp list
   | VarExp        of lvar
   | LetExp        of ldec list * lexp
@@ -69,7 +69,7 @@ and ldec = dec Location.loc
 and fundec = symbol * list_param * symbol * lexp
   [@@deriving show]
 
-(* lista de declaracoes de variaveis com o typo*)
+(* lista de declaracoes de variaveis com o tipo*)
 and list_param = (symbol * symbol) list
   [@@deriving show]
   

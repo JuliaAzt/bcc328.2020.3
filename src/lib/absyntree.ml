@@ -72,11 +72,12 @@ and tree_of_exp_basic exp =
   | IfExp (t,b,c)             -> mktr "IfExp" [tree_of_lexp t; tree_of_lexp b; tree_of_option tree_of_lexp c]
   | WhileExp (t, b)           -> mktr "WhileExp" [tree_of_lexp t; tree_of_lexp b]
   | BreakExp                  -> mktr "BreakExp" []
-  | ExpSeq seq                -> mktr "ExpSeq" (List.map tree_of_lexp seq)
+  | SeqExp seq                -> mktr "SeqExp" (List.map tree_of_lexp seq)
   | CallExp (f, xs)           -> mktr "CallExp" [mktr (name f) []; mktr "Args" (List.map tree_of_lexp xs)]
   | VarExp x                  -> mktr "VarExp" [tree_of_lvar x]
   | LetExp (d, e)             -> mktr "LetExp" [mktr "Decs" (List.map tree_of_ldec d); tree_of_lexp e]
-  | AssignExp (v,e)           -> mktr "AssignExp" [ (tree_of_lvar v) ; (tree_of_lexp e) ]
+  | AssignExp (x, e)          -> mktr "AssignExp" [tree_of_lvar x; tree_of_lexp e]
+
 and tree_of_var var =
   match var with
   | SimpleVar x -> mktr (sprintf "SimpleVar %s" (Symbol.name x)) []
